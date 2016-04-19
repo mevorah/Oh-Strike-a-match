@@ -1,0 +1,77 @@
+<html>
+    <header>
+        <link rel="stylesheet" href="style.css">
+        <script src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
+    </header>
+    <body>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/client.js"></script>
+
+        <div id="shell">
+            <div id="game-area">
+                <div id="top-area">
+                    <table>
+                        <tr>
+                            <td>
+                                <div id="time-area">
+                                    5
+                                </div>
+                            </td>
+                            <td>
+                                <div id="answer-area">
+                                    "Seinfeld Characters"
+                                </div>
+                            </td>
+                            <td>
+                                <div id="round-area">
+                                    1
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div id="options-area">
+                    <table>
+                        <tr>
+                            <td>
+                                <div class="option">George</div>
+                            </td>
+                            <td>
+                                <div class="option">Apple</div>
+                            </td>
+                            <td>
+                                <div class="option">Book</div>
+                            </td>
+                        </tr>
+                        <tr>
+                             <td>
+                                <div class="option">Guitar</div>
+                            </td>
+                             <td>
+                                <div class="option">Jerry</div>
+                            </td>
+                            <td>
+                                <div class="option">Phone</div>
+                            </td>                            
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div id="chat-area">
+            <div id="room-area">
+                <ul id="room-list">
+                </ul>
+            </div>
+            <div id="message-area">
+                <ul id="message-list">
+                </ul>
+            </div>
+            <div id="compose-area">
+                <input id="input-field" type="text" placeholder=" message">
+            </div>
+        </div>
+        </div>
+        
+        
+    </body>
+</html>
