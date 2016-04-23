@@ -5,24 +5,32 @@ body{
     background-image: url("IMG_1708.JPG");
     background-size: cover;
 }
+
 li {
     background-color: white;
     padding-right: 25px;
     margin-left: -20px;
     list-style: none;
 }
+
 table{
     text-align: center;
     width: 100%;
 }
+
 #shell {
-    #background-color: royalblue;
 
     position: relative;
-    margin: 50px auto;
+    margin: 70px auto;
     
     width: 600px;
-    height: 580px;
+    height: 500px;
+}
+
+#time-area, #answer-area, #round-area, #message-area, #compose-area, #room-area, .option {
+    border: solid;
+    border-width: 4px;
+    border-color: white;
 }
 
 
@@ -44,39 +52,36 @@ table{
     
     width: 147px;
     height: 192px;
-    
-    border: solid;
-    border-width: 4px;
-    border-color: white;
 }
+
+#message-area, #compose-area {
+    width: 432px;
+}
+
+#message-area::-webkit-scrollbar * {
+   background-color: rebeccapurple;
+}  
 #message-area {
     background-color: transparent;
     
-    width: 437px;
-    height: 144px;
+    height: 140px;
     
     position: absolute;
     left: 0px;
     
-    border: solid;
-    border-width: 4px;
-    border-color: white;
-    
     word-wrap: break-word;
-    overflow-y: scroll;
+
+    overflow-y: auto;
+    
 }
+
 #compose-area {
-    background-color: transparent;
-    width: 437px;
     height: 40px;
     
     position: absolute;
     left: 0px;
     bottom: 0px;
     
-    border: solid;
-    border-width: 4px;
-    border-color: white;
 }
 #input-field {
     font-size: 25px;
@@ -97,29 +102,20 @@ table{
     width: 100%;
 }
 
+#answer-area {
+    width: 100px;
+}
+
+/*
+    Round indication
+*/
+#inbetween-round-area{
+    
+}
 
 /*
     Options Area
 */
 .option{
     height: 100px;
-    border: solid;
-    border-width: 4px;
-    border-color: white;
 }
-
-.button {
-    width: 150px;
-    height: 90px;
-    
-    background-color: transparent;
-    
-    border-style: solid;
-    border-width: 4px;
-    border-color: white;
-    
-    line-height: 90px;
-    display: table;
-    text-align: center;
-}
-
