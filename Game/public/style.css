@@ -17,9 +17,11 @@ table{
     text-align: center;
     width: 100%;
 }
+td {
+    width: 33%;
+}
 
 #shell {
-
     position: relative;
     margin: 70px auto;
     
@@ -98,19 +100,11 @@ table{
 /*
     Top Area
 */
+#answer-area, #time-area, #round-area{
+    height: 18px;
+}
 #top-area{
     width: 100%;
-}
-
-#answer-area {
-    width: 100px;
-}
-
-/*
-    Round indication
-*/
-#inbetween-round-area{
-    
 }
 
 /*

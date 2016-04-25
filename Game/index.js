@@ -26,27 +26,7 @@ var generatedRounds = function () {
         clientRound:
             {
                 roundNum: 1,
-                roundClass: "a",
-                options:
-                    [
-                        "George",
-                        "Apple",
-                        "Green",
-                        "Umbrella",
-                        "Notebook",
-                        "Jerry"
-                    ]
-            }
-    }, {
-        round: 2,
-        answer:
-            {
-                choices: ["asd", "Jerry"],
-                answer: "Seinfeld"
-            },
-        clientRound:
-            {
-                roundNum: 2,
+                roundTime: 12,
                 roundClass: "a",
                 options:
                     [
@@ -74,26 +54,24 @@ var GAME = {
     },
     currentRound: 0,
     rounds: "",
-    gameStarted: false
+    gameStarted: false,
+    countDown: 10
 };
-
-
 
 
 function gotoGameOver(){
     console.log("game over");
     sendMessageToInGameUsers('game over', {});
-    
-    console.log("usersReturnedaftergo:"+GAME.usersReturned.length);
-    
+        
     setTimeout(function(){
         cleanupGame();
+        io.emit('waiting for players', {});
         checkIfCanStart();
     }, 5000);
 }
 function cleanupGame(){
     for(var i = 0; i < GAME.allUsers.length; i++){
-        GAME.allUsers[i].score = 0;
+        GAME.allUsers[i].score = "";
     }
     GAME.gameUsers = [];
     GAME.currentRound = 0;
@@ -120,6 +98,7 @@ function initiateGameUsers(){
     GAME.gameUsers = [];
     for(var i = 0; i < GAME.allUsers.length; i++){
         var user = GAME.allUsers[i];
+        user.score = 0;
         GAME.gameUsers.push(user);
     }
 }
@@ -129,11 +108,24 @@ function gotoNextRound() {
         gotoGameOver();
     }else{
         var nextRound = GAME.rounds[GAME.currentRound].clientRound;
-        sendMessageToInGameUsers('next round', nextRound);
+        
+        var c = GAME.countDown;
+        var t = setInterval(function(){
+            c--;
+            sendMessageToInGameUsers('round countdown', {time: c});
+            if(c == 0){
+                clearInterval(t);
+            }
+        }, 1000);
+        
+        setTimeout(function(){
+            clearInterval(t);
+            sendMessageToInGameUsers('next round', nextRound);
+        }, 1000 * GAME.countDown);
+        
+        
     }
 }
-
-
 
 var getUser = function(socket){
     for(var i = 0; i < GAME.allUsers.length; i++){
@@ -143,6 +135,16 @@ var getUser = function(socket){
         }
     }
     console.error("Couldn't find user");
+}
+
+var userIsInGame = function(user){
+    for(var i = 0; i < GAME.gameUsers.length; i++){
+        var gameUser = GAME.gameUsers[i];
+        if(gameUser == user){
+            return true;
+        }
+    }
+    return false;
 }
 
 var getSocket = function(user){
@@ -162,7 +164,7 @@ function userConnected(socketId, socket) {
         {
             socketId: socketId,
             userId: GAME.nextUserId(),
-            score: 0
+            score: ""
         };
     GAME.allUsers.push(newUser);
     
@@ -187,6 +189,13 @@ function userDisconnected(socketId){
         if(user.socketId == socketId){
             userFound = true;
             GAME.allUsers.splice(i, 1);
+        }
+    }
+    
+    for(var i = 0; i < GAME.gameUsers.length; i++){
+        var user = GAME.gameUsers[i];
+        if(user.socketId == socketId){
+            GAME.gameUsers.splice(i, 1);
         }
     }
     
@@ -220,7 +229,7 @@ function submittedSelection(userResponse, socket){
     console.log("usersReturned:"+GAME.usersReturned.length);
     console.log("gameUsers:"+GAME.gameUsers.length);
     
-    if(GAME.usersReturned.length == GAME.gameUsers.length ){
+    if(GAME.usersReturned.length >= GAME.gameUsers.length ){
         console.log("Round ended");
         GAME.usersReturned = [];
         
@@ -228,8 +237,10 @@ function submittedSelection(userResponse, socket){
         emitUsersChanged();
         
         //send signal that round ended
-        sendMessageToInGameUsers('round ended', 
+        setTimeout(function(){
+            sendMessageToInGameUsers('round ended', 
                                  { answer: GAME.rounds[GAME.currentRound].answer.answer });
+        }, 1000);        
         
         setTimeout(function(){
             sendMessageToInGameUsers('between rounds', {});
@@ -272,7 +283,7 @@ function scoreUser(user, userResponse, round){
     
     //Increment score
     if(answeredCorrectly == true){
-        user.score++;
+        user.score += Math.ceil( 1000 * ( userResponse.time / round.clientRound.roundTime) );
     }
 }
 

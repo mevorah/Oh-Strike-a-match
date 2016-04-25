@@ -2,6 +2,7 @@ var socket = io();
      
 var userNames = [];
 var me;
+var playing;
 var choice = 
     {
         numSelected: 0,
@@ -43,7 +44,12 @@ socket.on('user assign', function(user){
     me = user;
 }); 
 socket.on('new message', function(msg){
-    $('#message-list').append('<li><ld>' + msg.user + "   " + msg.content + '</li></ld>');
+    if(msg.user == me.userId){
+        $('#message-list').append('<li><ld id="my-username-text">' + msg.user + "   " + msg.content + '</li></ld>');
+    }else{
+        $('#message-list').append('<li><ld>' + msg.user + "   " + msg.content + '</li></ld>');
+    }
+    
 });
 function sendMessage(){
     var message = $('#input-field').val();
@@ -88,11 +94,24 @@ socket.on('between rounds', function(){
 
     socket.emit('user ready');
 });
-          
+
+socket.on('round countdown', function(msg){
+    console.log('round countdown');
+    $('#game-in-progress-area').hide();
+    $('#between-round-area').show();
+    $('#game-area').hide();
+    $('#gameover-area').hide();
+    $('#waiting-for-players-area').hide();
+    $('#round-countdown-field').text(msg.time);
+});
+ 
 socket.on('next round', function(round){
+    console.log("next round starting");
     clearChoice();
     setCells(round);
-
+    startTimer(round.roundTime);
+    
+    $('#time-area').text("12");
     $('#game-in-progress-area').hide();
     $('#between-round-area').hide();
     $('#game-area').show();
@@ -139,6 +158,8 @@ function setCells(round){
         $(cellId).text(option);
     }
     
+    $('#answer-area').text("");  
+    $('#round-countdown-field').text(round.roundTime);
     $('#round-area').text(round.roundNum);
 }
 function selectChoice(selected){
@@ -153,6 +174,7 @@ function selectChoice(selected){
         choice.numSelected++;
         fillCell(selectedId);        
         
+        clearInterval(gameTimer);
         socket.emit('submitted selection', choice);
     }
 }
@@ -162,8 +184,22 @@ function fillCell(buttonId){
     $('#'+buttonId).css({backgroundColor: 'white'});
 }
 
+var gameTimer;
 
-
+function startTimer(time){
+    
+    var gameTime = time;
+    gameTimer = setInterval(function(){
+        gameTime--;
+        choice.time = gameTime;
+        $('#time-area').text(gameTime);
+        if(gameTime <= 0){
+            $('#time-area').text("0");
+            clearInterval(gameTimer);
+            socket.emit('submitted selection', choice);
+        }
+    }, 1000);
+}
 
 
 
