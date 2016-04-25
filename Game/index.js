@@ -5,15 +5,15 @@ var express = require('express');
 var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
-
 http.listen(3000, function () {
     'use strict';
     console.log('listening on *:3000');
 });
-
 app.use(express.static(__dirname + '/public'));
 
-
+/*
+    Objects
+*/
 var generatedRounds = function () {
     'use strict';
     return [{
@@ -25,7 +25,29 @@ var generatedRounds = function () {
             },
         clientRound:
             {
-                num: "a",
+                roundNum: 1,
+                roundClass: "a",
+                options:
+                    [
+                        "George",
+                        "Apple",
+                        "Green",
+                        "Umbrella",
+                        "Notebook",
+                        "Jerry"
+                    ]
+            }
+    }, {
+        round: 2,
+        answer:
+            {
+                choices: ["asd", "Jerry"],
+                answer: "Seinfeld"
+            },
+        clientRound:
+            {
+                roundNum: 2,
+                roundClass: "a",
                 options:
                     [
                         "George",
@@ -39,10 +61,12 @@ var generatedRounds = function () {
     }];
 };
 var GAME = {
-    users: [],
+    allUsers: [],
+    sockets: [],
+    gameUsers: [],
     usersReturned: [],
     userThreshold: 2,
-    numUsers: function () { 'use strict'; return GAME.users.length; },
+    numUsers: function () { 'use strict'; return GAME.allUsers.length; },
     nextUserIdToUse: 0,
     nextUserId: function () {
         'use strict';
@@ -54,17 +78,172 @@ var GAME = {
 };
 
 
-function cleanupGame(){
-    GAME = GAME.prototype;
-}
+
+
 function gotoGameOver(){
-    /*Display winner*/
     console.log("game over");
-    /* time out */
-    io.emit('game over', {});
-    //cleanupGame();
-    //checkIfCanStart();
-}  
+    sendMessageToInGameUsers('game over', {});
+    
+    console.log("usersReturnedaftergo:"+GAME.usersReturned.length);
+    
+    setTimeout(function(){
+        cleanupGame();
+        checkIfCanStart();
+    }, 5000);
+}
+function cleanupGame(){
+    for(var i = 0; i < GAME.allUsers.length; i++){
+        GAME.allUsers[i].score = 0;
+    }
+    GAME.gameUsers = [];
+    GAME.currentRound = 0;
+    GAME.rounds = "";
+    GAME.gameStarted = false;
+}
+
+function checkIfCanStart() {
+    if ((GAME.numUsers() >= GAME.userThreshold) && !GAME.gameStarted) {
+        console.log('Starting round');
+        startGame();
+    }
+}
+
+function startGame () {
+    initiateGameUsers();
+    emitUsersChanged();
+    GAME.rounds = generatedRounds();
+    GAME.gameStarted = true;
+    gotoNextRound();
+}
+
+function initiateGameUsers(){
+    GAME.gameUsers = [];
+    for(var i = 0; i < GAME.allUsers.length; i++){
+        var user = GAME.allUsers[i];
+        GAME.gameUsers.push(user);
+    }
+}
+
+function gotoNextRound() {
+    if((GAME.currentRound + 1) > GAME.rounds.length) {
+        gotoGameOver();
+    }else{
+        var nextRound = GAME.rounds[GAME.currentRound].clientRound;
+        sendMessageToInGameUsers('next round', nextRound);
+    }
+}
+
+
+
+var getUser = function(socket){
+    for(var i = 0; i < GAME.allUsers.length; i++){
+        var user = GAME.allUsers[i];
+        if(user.socketId == socket.id){
+            return user;
+        }
+    }
+    console.error("Couldn't find user");
+}
+
+var getSocket = function(user){
+    for(var i = 0; i < GAME.sockets.length; i++){
+        var socket = GAME.sockets[i];
+        if(socket.id == user.socketId){
+            return socket;
+        }
+    }
+    console.error("Couldn't find socket");
+}
+
+function userConnected(socketId, socket) {
+    GAME.sockets.push(socket);
+    
+    var newUser =
+        {
+            socketId: socketId,
+            userId: GAME.nextUserId(),
+            score: 0
+        };
+    GAME.allUsers.push(newUser);
+    
+    // Send signals to client
+    socket.emit('user assign', newUser);
+    emitUsersChanged();
+    if(GAME.gameStarted){
+        socket.emit('game in progress', {});
+    }else{
+        socket.emit('waiting for players', {});
+    }
+    
+    checkIfCanStart();
+}
+
+function userDisconnected(socketId){
+    console.log("User disconnected:" + socketId);
+    
+    var userFound = false;
+    for(var i = 0; i < GAME.allUsers.length; i++){
+        var user = GAME.allUsers[i];
+        if(user.socketId == socketId){
+            userFound = true;
+            GAME.allUsers.splice(i, 1);
+        }
+    }
+    
+    for(var i = 0; i < GAME.sockets.length; i++){
+        var storedSocketId = GAME.sockets[i].id;
+        if(storedSocketId == socketId){
+            GAME.sockets.splice(i, 1);
+        }
+    }
+
+    if(!userFound){
+        console.error("Disconnected user not found in global list of users");
+    }
+
+    emitUsersChanged();
+}
+function newMessage(msg){
+    io.emit('new message', msg);
+}
+function submittedSelection(userResponse, socket){
+    scoreUser
+    (
+        getUser(socket), 
+        userResponse, 
+        GAME.rounds[GAME.currentRound]
+    );
+    
+    console.log("socket:"+socket.id +"Submitted sel- Added to user returned");
+    GAME.usersReturned.push(socket);    
+    
+    console.log("usersReturned:"+GAME.usersReturned.length);
+    console.log("gameUsers:"+GAME.gameUsers.length);
+    
+    if(GAME.usersReturned.length == GAME.gameUsers.length ){
+        console.log("Round ended");
+        GAME.usersReturned = [];
+        
+        //send updated score to users
+        emitUsersChanged();
+        
+        //send signal that round ended
+        sendMessageToInGameUsers('round ended', 
+                                 { answer: GAME.rounds[GAME.currentRound].answer.answer });
+        
+        setTimeout(function(){
+            sendMessageToInGameUsers('between rounds', {});
+        }, 6000);
+    }
+}
+
+function sendMessageToInGameUsers(signal, msg){
+    for(var i = 0; i < GAME.gameUsers.length; i++){
+        var socket = getSocket(GAME.gameUsers[i]);
+        socket.emit(signal, msg);
+    }
+}
+
 function scoreUser(user, userResponse, round){
     console.log("scoring user");
     
@@ -97,120 +276,23 @@ function scoreUser(user, userResponse, round){
     }
 }
 
-function gotoNextRound() {
-    console.log("next round");
-    'use strict';
-    //Go to next round
-    console.log("currentround:"+GAME.currentRound);
-    console.log("roundslength:"+GAME.rounds.length);
-    
-    if((GAME.currentRound + 1) > GAME.rounds.length) {
-        gotoGameOver();
-    }else{
-        var nextRound = GAME.rounds[GAME.currentRound].clientRound;
-        io.emit('next round', nextRound);
-    }
-}
-var getUser = function(socket){
-    for(var i = 0; i < GAME.users.length; i++){
-        var user = GAME.users[i];
-        if(user.socketId == socket.id){
-            return user;
-        }
-    }
-    console.error("Couldn't find user");
-}
-function startGame () {
-    'use strict';
-    GAME.rounds = generatedRounds();
-    GAME.gameStarted = true;
-    gotoNextRound();
-}
-function checkIfCanStart() {
-    'use strict';
-    if ((GAME.numUsers() >= GAME.userThreshold) && !GAME.gameStarted) {
-        console.log('Starting round');
-        startGame();
-    }
-}
-
-function userConnected(socketId, socket) {
-    if (GAME.gameStarted) {
-        //Navigate to landing
-        return;
-    }
-    
-    console.log("User connected:" + socketId);
-    var newUser =
-        {
-            socketId: socketId,
-            userId: GAME.nextUserId(),
-            score: 0
-        };
-    GAME.users.push(newUser);
-    socket.emit('user assign', newUser);
-    io.emit('users changed', GAME.users);
-    
-    checkIfCanStart();
-}
-function userDisconnected(socketId){
-    console.log("User disconnected:" + socketId);
-    
-    var userFound = false;
-    for(var i = 0; i < GAME.users.length; i++){
-        var user = GAME.users[i];
-        if(user.socketId == socketId){
-            userFound = true;
-            GAME.users.splice(i, 1);
-        }
-    }
-    
-    if(!userFound){
-        console.error("Disconnected user not found in global list of users");
-    }
-    
-    emitUsersChanged();
-}
-function newMessage(msg){
-    io.emit('new message', msg);
-}
-function submittedSelection(userResponse, socket){
-    scoreUser
-    (
-        getUser(socket), 
-        userResponse, 
-        GAME.rounds[GAME.currentRound]
-    );
-    
-    GAME.usersReturned.push(socket);
-    if(GAME.usersReturned.length == GAME.users.length ){
-        console.log("Round ended");
-        GAME.usersReturned = [];
-        
-        //send updated score to users
-        emitUsersChanged();
-        
-        //send signal that round ended
-        io.emit('round ended', { answer: GAME.rounds[GAME.currentRound].answer.answer });
-    }
-}
 function userReady(msg, socket){
+    console.log("socket:"+socket.id +"User ready - Added to user returned");
     GAME.usersReturned.push(socket);
     
-    console.log("num usersReturned:"+GAME.usersReturned.length);
-    console.log("num users:"+GAME.users.length);
-    
-    
-    if(GAME.usersReturned.length == GAME.users.length ){
+    if(GAME.usersReturned.length == GAME.gameUsers.length ){
         console.log("All users ready for next round");
         GAME.usersReturned = [];
-        GAME.currentRound++;
-        gotoNextRound();
+        
+        setTimeout(function(){
+            GAME.currentRound++;
+            gotoNextRound(); 
+        }, 3000) 
     }
 }
 
 function emitUsersChanged(){
-    io.emit('users changed', GAME.users);
+    io.emit('users changed', GAME.allUsers);
 }
 
 io.on('connection', function (socket) {

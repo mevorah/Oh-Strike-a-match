@@ -11,7 +11,7 @@ var choice =
     }
 
 $(document).ready(function(){
-    setIdleState();
+    setNothingState();
     
     $('#input-field').keydown(function(event){
        if(event.keyCode == 13){
@@ -19,20 +19,11 @@ $(document).ready(function(){
        }
     });
     
-    $('.option').click(function(a){
-        console.log(a.currentTarget.innerHTML);
-        selectChoice(a.currentTarget.innerText);
+    $('.option').click(function(a){     
+        console.log(a.id);
+        selectChoice(a);
     });
-   
-   
 });
-
-function setIdleState(){
-    console.log("helloasdlkf;ajsdf");
-    $('#game-area').hide();
-    $('#inbetween-round-area').hide();
-    $('#idle-area').show();
-}
 
 /*
     Messaging
@@ -61,82 +52,117 @@ function sendMessage(){
     $('#input-field').val('');
 }
 
-/*
-    Game
-*/
+//
+// States
+//
+function setNothingState(){
+    $('#game-in-progress-area').hide();
+    $('#between-round-area').hide();
+    $('#game-area').hide();
+    $('#gameover-area').hide();
+    $('#waiting-for-players-area').hide();
+}
+
+socket.on('game in progress', function(msg){
+    $('#game-in-progress-area').show();
+    $('#between-round-area').hide();
+    $('#game-area').hide();
+    $('#gameover-area').hide();
+    $('#waiting-for-players-area').hide();
+});
+
+socket.on('waiting for players', function(msg){
+    $('#game-in-progress-area').hide();
+    $('#between-round-area').hide();
+    $('#game-area').hide();
+    $('#gameover-area').hide();
+    $('#waiting-for-players-area').show();
+});
+
+socket.on('between rounds', function(){
+    $('#game-in-progress-area').hide();
+    $('#between-round-area').show();
+    $('#game-area').hide();
+    $('#gameover-area').hide();
+    $('#waiting-for-players-area').hide();
+
+    socket.emit('user ready');
+});
+          
+socket.on('next round', function(round){
+    clearChoice();
+    setCells(round);
+
+    $('#game-in-progress-area').hide();
+    $('#between-round-area').hide();
+    $('#game-area').show();
+    $('#gameover-area').hide();
+    $('#waiting-for-players-area').hide();
+    $('#answer-area').text("");  
+});
+
+socket.on('round ended', function(msg){
+    $('#game-in-progress-area').hide();
+    $('#between-round-area').hide();
+    $('#game-area').show();
+    $('#gameover-area').hide();
+    $('#waiting-for-players-area').hide();
+    $('#answer-area').text(msg.answer);    
+});
 
 socket.on('game over', function(msg){
-    console.log('game over');
-    setIdleState();
-});
-
-
-function emitUserReady(){
-    socket.emit('user ready', {});
-}
-
-function inbetweenRounds(){
+    $('#game-in-progress-area').hide();
+    $('#between-round-area').hide();
     $('#game-area').hide();
-    $('#inbetween-round-area').show();
-    $('#idle-area').hide();
-    
-    window.setTimeout(emitUserReady, 3000);
-}
-function showAnswer(answer){
-    $('#answer-area').text(answer);
-}
-socket.on('round ended', function(msg){
-    console.log("round ended")
-    showAnswer(msg.answer);
-    window.setTimeout(inbetweenRounds, 6000);
+    $('#gameover-area').show();
+    $('#waiting-for-players-area').hide();
 });
 
-
-function selectChoice(selected){
-    if(choice.numSelected == 0){
-        choice.choice1 = selected;
-        choice.numSelected++;
-    }else if(choice.numSelected == 1){
-        choice.choice2 = selected;
-        choice.numSelected++;
-        
-        console.log("called");
-        socket.emit('submitted selection', choice);
-    }
-}
-
-function setCells(round){
-    for(var i = 0; i < round.options.length; i++){
-        var option = round.options[i];
-        console.log(round);
-        var cellId = '#option-'+round.num+'-'+i;
-        console.log(cellId);
-        $(cellId).text(option);
-    }
-}
-function showGame(){
-    $('#game-area').show();
-    $('#inbetween-round-area').hide();
-    $('#idle-area').hide();
-}
+//
+//Game Functions
+//
 function clearChoice(){
     choice.numSelected = 0;
     choice.time = 0;
     choice.choice1 = "";
     choice.choice2 = "";
 }
-function clearAnswer(){
-    $('#answer-area').text("");
+
+function setCells(round){
+    for(var i = 0; i < round.options.length; i++){
+        var option = round.options[i];
+        console.log(round);
+        var cellId = '#option-'+round.roundClass+'-'+i;
+
+        console.log(cellId);
+        $(cellId).css({backgroundColor: 'transparent'});
+        $(cellId).text(option);
+    }
+    
+    $('#round-area').text(round.roundNum);
 }
-function setupGame(round){
-    clearChoice();
-    clearAnswer();
-    setCells(round);
-    showGame();
+function selectChoice(selected){
+    var selectedText = selected.currentTarget.innerText;
+    var selectedId = selected.currentTarget.id;
+    if(choice.numSelected == 0){
+        choice.choice1 = selectedText;
+        choice.numSelected++;
+        fillCell(selectedId);
+    }else if((choice.numSelected == 1) && (selectedText != choice.choice1)){
+        choice.choice2 = selectedText;
+        choice.numSelected++;
+        fillCell(selectedId);        
+        
+        socket.emit('submitted selection', choice);
+    }
 }
-socket.on('next round', function(round){
-    setupGame(round);
-});
+    
+function fillCell(buttonId){
+    console.log(buttonId);
+    $('#'+buttonId).css({backgroundColor: 'white'});
+}
+
+
 
 
 
