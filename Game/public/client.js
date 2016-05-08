@@ -11,6 +11,8 @@ var choice =
         choice2: ""
     }
 
+var soundUrls = ['A.m4a', 'B.m4a', 'C.m4a'];
+
 $(document).ready(function(){
     setNothingState();
     
@@ -20,11 +22,23 @@ $(document).ready(function(){
        }
     });
     
-    $('.option').click(function(a){     
+    $('.option').click(function(a){ 
+        
+        playClap();
+        
         console.log(a.id);
         selectChoice(a);
     });
 });
+
+function playClap(){
+    var index = Math.floor(Math.random() * soundUrls.length);
+    console.log(index);
+    var soundUrl = soundUrls[index];
+    var sound = new Howl({
+        urls: [soundUrl]
+    }).play();
+}
 
 /*
     Messaging
@@ -70,6 +84,7 @@ function setNothingState(){
 }
 
 socket.on('game in progress', function(msg){
+    clearInterval(gameTimer);
     $('#game-in-progress-area').show();
     $('#between-round-area').hide();
     $('#game-area').hide();
@@ -91,8 +106,6 @@ socket.on('between rounds', function(){
     $('#game-area').hide();
     $('#gameover-area').hide();
     $('#waiting-for-players-area').hide();
-
-    socket.emit('user ready');
 });
 
 socket.on('round countdown', function(msg){
@@ -168,6 +181,7 @@ function selectChoice(selected){
     if(choice.numSelected == 0){
         choice.choice1 = selectedText;
         choice.numSelected++;
+        
         fillCell(selectedId);
     }else if((choice.numSelected == 1) && (selectedText != choice.choice1)){
         choice.choice2 = selectedText;
@@ -185,9 +199,7 @@ function fillCell(buttonId){
 }
 
 var gameTimer;
-
 function startTimer(time){
-    
     var gameTime = time;
     gameTimer = setInterval(function(){
         gameTime--;

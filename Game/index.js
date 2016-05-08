@@ -18,113 +18,155 @@ var generatedRounds = function () {
     'use strict';
     return [{
         round: 1,
-        answer:
-            {
-                choices: ["George", "Jerry"],
-                answer: "Seinfeld"
-            },
-        clientRound:
-            {
-                roundNum: 1,
-                roundTime: 12,
-                roundClass: "a",
-                options:
-                    [
-                        "George",
-                        "Apple",
-                        "Green",
-                        "Umbrella",
-                        "Notebook",
-                        "Jerry"
-                    ]
-            }
-    }];
+        answer: {
+            choices: ["George", "Jerry"],
+            answer: "Seinfeld"
+        },
+        clientRound: {
+            roundNum: 1,
+            roundTime: 12,
+            roundClass: "a",
+            options: [
+                "George",
+                "Apple",
+                "Green",
+                "Umbrella",
+                "Notebook",
+                "Jerry"
+            ]
+        }}
+    ];
 };
+
 var GAME = {
     allUsers: [],
     sockets: [],
     gameUsers: [],
     usersReturned: [],
-    userThreshold: 2,
-    numUsers: function () { 'use strict'; return GAME.allUsers.length; },
+    userThreshold: 3,
+    numUsers: function () { return this.allUsers.length; },
     nextUserIdToUse: 0,
     nextUserId: function () {
-        'use strict';
-        return "user" + GAME.nextUserIdToUse++;
+        return "user" + this.nextUserIdToUse++;
     },
     currentRound: 0,
+    roundInProgress: false,
     rounds: "",
     gameStarted: false,
-    countDown: 10
+    countDown: 10,
+    canStartGame: function() {
+        return ((this.numUsers() >= this.userThreshold) && !this.gameStarted);    
+    },
+    initiateGameUsers: function() {
+        for(var i = 0; i < this.allUsers.length; i++){
+            var user = this.allUsers[i];
+            user.score = 0;
+            this.gameUsers.push(user);
+        }
+    },
+    cleanup: function () {
+        for(var i = 0; i < GAME.allUsers.length; i++){
+            this.allUsers[i].score = "";
+        }
+        this.gameUsers = [];
+        this.currentRound = 0;
+        this.rounds = "";
+        this.gameStarted = false;
+    },
+    CONSTANTS: {
+        oneSecond: 1000,
+        gameOverScreenTime: 5000,
+        
+    }
 };
 
 
-function gotoGameOver(){
-    console.log("game over");
+function gameOver(){
+    console.log("[GameState] Game Over");
+    
     sendMessageToInGameUsers('game over', {});
-        
+    GAME.cleanup();
+    
     setTimeout(function(){
-        cleanupGame();
         io.emit('waiting for players', {});
-        checkIfCanStart();
-    }, 5000);
-}
-function cleanupGame(){
-    for(var i = 0; i < GAME.allUsers.length; i++){
-        GAME.allUsers[i].score = "";
-    }
-    GAME.gameUsers = [];
-    GAME.currentRound = 0;
-    GAME.rounds = "";
-    GAME.gameStarted = false;
-}
-
-function checkIfCanStart() {
-    if ((GAME.numUsers() >= GAME.userThreshold) && !GAME.gameStarted) {
-        console.log('Starting round');
-        startGame();
-    }
+        if(GAME.canStartGame()) {
+            console.log("[Transition] Going to start game");
+            startGame();
+        }
+    }, GAME.CONSTANTS.gameOverScreenTime);
 }
 
 function startGame () {
-    initiateGameUsers();
-    emitUsersChanged();
+    console.log('[GameState] Starting Game');
+    GAME.initiateGameUsers();
     GAME.rounds = generatedRounds();
     GAME.gameStarted = true;
-    gotoNextRound();
+    emitUsersChanged();
+    console.log("[Transition] Going to first round");
+    startNextRound();
 }
 
-function initiateGameUsers(){
-    GAME.gameUsers = [];
-    for(var i = 0; i < GAME.allUsers.length; i++){
-        var user = GAME.allUsers[i];
-        user.score = 0;
-        GAME.gameUsers.push(user);
-    }
-}
-
-function gotoNextRound() {
+function startNextRound() {
     if((GAME.currentRound + 1) > GAME.rounds.length) {
-        gotoGameOver();
+        console.log("[Transtion] Going to game over");
+        gameOver();
     }else{
+        console.log("[GameState] Starting round");
+        
         var nextRound = GAME.rounds[GAME.currentRound].clientRound;
         
+        //Count down to game
         var c = GAME.countDown;
         var t = setInterval(function(){
             c--;
             sendMessageToInGameUsers('round countdown', {time: c});
             if(c == 0){
                 clearInterval(t);
+                
+                console.log("[GameState] Round started");
+                GAME.roundInProgress = true;
+                sendMessageToInGameUsers('next round', nextRound);
+                setTimeout(bootUnresponsive, 15000);
+                
             }
-        }, 1000);
-        
-        setTimeout(function(){
-            clearInterval(t);
-            sendMessageToInGameUsers('next round', nextRound);
-        }, 1000 * GAME.countDown);
-        
+        }, GAME.CONSTANTS.oneSecond);
         
     }
+}
+                   
+function bootUnresponsive(){
+    if(!GAME.roundInProgress){
+        console.log("No cleanup - round over");
+        return;
+    }
+    
+    
+    var usersToNotBoot = [];
+    
+    for(var i = 0; i < GAME.gameUsers.length; i++){
+        var gameUser = GAME.gameUsers[i];
+        console.log("Game User:"+gameUser.userId);
+        var userReturned = false;
+        for(var j = 0; j < GAME.usersReturned.length; j++){
+            var returnedUser = GAME.usersReturned[j];
+            if(gameUser.socketId == returnedUser.socketId){
+                console.log("User returned");
+                usersToNotBoot.push(gameUser);
+                userReturned = true;
+            }
+        }
+        if(!userReturned){
+            console.log("booting unresponsibe user:"+gameUser.userId);
+            gameUser.score = "";
+            var bootedSocket = getSocket(gameUser);
+            bootedSocket.emit('game in progress', {});
+        }
+    }
+    
+    GAME.gameUsers = usersToNotBoot;
+    
+    checkAndExecuteIfRoundComplete();
+    
 }
 
 var getUser = function(socket){
@@ -177,7 +219,9 @@ function userConnected(socketId, socket) {
         socket.emit('waiting for players', {});
     }
     
-    checkIfCanStart();
+    if(GAME.canStartGame()) {
+        startGame();
+    }
 }
 
 function userDisconnected(socketId){
@@ -196,6 +240,7 @@ function userDisconnected(socketId){
         var user = GAME.gameUsers[i];
         if(user.socketId == socketId){
             GAME.gameUsers.splice(i, 1);
+            checkAndExecuteIfRoundComplete();
         }
     }
     
@@ -212,10 +257,10 @@ function userDisconnected(socketId){
 
     emitUsersChanged();
 }
-function newMessage(msg){
+function userSentNewMessage(msg){
     io.emit('new message', msg);
 }
-function submittedSelection(userResponse, socket){
+function userSubmittedSelection(userResponse, socket){
     scoreUser
     (
         getUser(socket), 
@@ -224,13 +269,18 @@ function submittedSelection(userResponse, socket){
     );
     
     console.log("socket:"+socket.id +"Submitted sel- Added to user returned");
-    GAME.usersReturned.push(socket);    
+    GAME.usersReturned.push(getUser(socket));    
     
     console.log("usersReturned:"+GAME.usersReturned.length);
     console.log("gameUsers:"+GAME.gameUsers.length);
     
+    checkAndExecuteIfRoundComplete();
+}
+
+function checkAndExecuteIfRoundComplete(){
     if(GAME.usersReturned.length >= GAME.gameUsers.length ){
         console.log("Round ended");
+        GAME.roundInProgress = false;
         GAME.usersReturned = [];
         
         //send updated score to users
@@ -244,6 +294,12 @@ function submittedSelection(userResponse, socket){
         
         setTimeout(function(){
             sendMessageToInGameUsers('between rounds', {});
+            console.log("All users ready for next round");
+            GAME.usersReturned = [];
+            setTimeout(function(){
+                GAME.currentRound++;
+                startNextRound(); 
+            }, 3000) 
         }, 6000);
     }
 }
@@ -287,25 +343,13 @@ function scoreUser(user, userResponse, round){
     }
 }
 
-function userReady(msg, socket){
-    console.log("socket:"+socket.id +"User ready - Added to user returned");
-    GAME.usersReturned.push(socket);
-    
-    if(GAME.usersReturned.length == GAME.gameUsers.length ){
-        console.log("All users ready for next round");
-        GAME.usersReturned = [];
-        
-        setTimeout(function(){
-            GAME.currentRound++;
-            gotoNextRound(); 
-        }, 3000) 
-    }
-}
-
 function emitUsersChanged(){
     io.emit('users changed', GAME.allUsers);
 }
 
+/*
+Entry point for all client actions
+*/
 io.on('connection', function (socket) {
     'use strict';
     userConnected(socket.id, socket);
@@ -315,27 +359,10 @@ io.on('connection', function (socket) {
     });
     
     socket.on('new message', function(msg){
-        newMessage(msg); 
+        userSentNewMessage(msg); 
     });
     
     socket.on('submitted selection', function(msg){
-        submittedSelection(msg, socket);
-    });
-    
-    socket.on('user ready', function(msg){
-        userReady(msg, socket); 
+        userSubmittedSelection(msg, socket);
     });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
