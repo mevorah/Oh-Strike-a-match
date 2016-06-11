@@ -1,13 +1,72 @@
-var VIEW_THRESHOLD = 500;
+var VIEW_THRESHOLD = 200;
 var MAX_CHOICE_LENGTH = 20;
 var NUM_OPTIONS = 3;
 var result = [];
 
-var categories = ["Seinfeld", "Saturday Night Live sketches", "Nicktoons"];
+var categories = [
+'Acorna',
+'Action characters',
+'Action film characters',
+'Action heroes',
+'Action television characters',
+'Action video game characters',
+'Activists',
+'Activities by jihadist groups',
+'Adam and Eve',
+'Adams family',
+'Adoptees by nationality',
+'Adoration of the Magi in art',
+'Adrian Mole',
+'Adventure characters',
+'Adventure film characters',
+'Advertising characters',
+'Advertising people',
+'Advisors',
+'Advocates of pseudoscience',
+'Afghan people',
+'African American given names',
+'African people by religion',
+'African people stubs',
+'African-American genealogy',
+'African-American people',
+'Afrikaans-speaking people',
+'Afrikaner people',
+'Afro-Brazilian people',
+'Afroasiatic peoples',
+'Afrocentrists',
+'Agatha Christie characters',
+'Agent Carter (TV series)',
+'Agents of S.H.I.E.L.D.',
+'Ainu people',
+'Air pirates',
+'Air traffic controllers',
+'Airstrikes by perpetrator',
+'Airstrikes conducted by France',
+'Airstrikes conducted by Iran',
+'Airstrikes conducted by Israel',
+'Airstrikes conducted by Italy',
+'Airstrikes conducted by Japan',
+'Aku people',
+'Al-Atassi family',
+'Al-Azm family',
+'Aladdin',
+'Alaska Native people',
+'Albanian biographers',
+'Albanian people',
+'Albanian people by war'
+];
 
-for(category of categories){
-    createQuestionAndAnswer(category);
-}
+console.log("starting");
+var i = 0;
+var stagger = setInterval(function(){
+    console.log("Creating Question ["+i+"] For:"+categories[i]);
+    createQuestionAndAnswer(categories[i]);
+    if(i == categories.length){
+        clearInterval(stagger);
+    }
+    i++;
+}, 10000)
+
 
 function createQuestionAndAnswer(category){
     var categoryText = "Category:"+category;
@@ -27,13 +86,16 @@ function createQuestionAndAnswer(category){
             var process = newProcess(category);
             console.log(data);
             for(var page of data.query.categorymembers){
-                processes[process]++;
-                averagePageViews(categoryText, page.title, process);
+                if(!page.title.includes("Category")){
+                    processes[process]++;
+                    averagePageViews(categoryText, page.title, process);
+                }
             }
         }
     });
 }
 
+var rerun = [];
 var averagePageViews = function(category, title, process) {
     $.ajax({
         url: 'http://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/' + title + '/daily/2015100100/2015103100',
@@ -50,10 +112,13 @@ var averagePageViews = function(category, title, process) {
             filter(category, title, average, process);
         },
         error: function(XMLHttpRequest, textStatus, errorThrown){
+            rerun.push({category:category,title:title});
             IFinished(process);
         }
     })
 }
+
+
 
 var filter = function(category, title, average, process){
     var isAboveThreshold = average > VIEW_THRESHOLD;
@@ -63,7 +128,10 @@ var filter = function(category, title, average, process){
     
     if(isAboveThreshold && doesNotContainAnswer && choiceWithinLength){
         result[process].push({title:title, average:average});
+    }else{
+        console.log("Not Pushing Page:"+title+"for Category:"+category+" due to [Average:"+average+", Length:"+choiceWithinLength+", doesNotcontainAnswer:"+doesNotContainAnswer+"]");
     }
+    
     IFinished(process);
 }
 
@@ -74,10 +142,12 @@ function printResult(res) {
 }
 
 function printHTML(res){
-    var str = "<tr><td>" + res[0];
+    var str = "<tr><td>" + res[0] + ",";
     for(var i = 1; i < res.length; i++){
-        str += "<td>"+res[i].title+"</td>";
+        str += res[i].title+",";
     }
+    str = str.substr(0, str.length - 1);
+    str += "</td>";
     var row = str.concat("</tr>");
     $("#CSV").append(row);
 }

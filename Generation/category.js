@@ -1,5 +1,5 @@
 
-var roots = ["American television networks"];
+var roots = ["People"];
 var toVisitCategories = new Set();
 var visitedCategories = new Set();
 
@@ -42,12 +42,24 @@ function deCatefy(category){
     return category.replace("Category:", "");
 }
 
+
+var MAX_CHOICE_LENGTH = 40;
+function filteredOut(category){
+    var choiceWithinLength = category.length < MAX_CHOICE_LENGTH;
+    if(!choiceWithinLength){
+        return true;
+    }
+    return false;
+}
+
 var count = 0;
 function printCategory(category){
+    if(filteredOut(category)) return;
     var c = deCatefy(category);
     //var row = "<tr><td>" + c + "</tr></td>";
     count++;
-    var row = "<tr><td>" + count + "</td><td>" + c + "</td></tr>";
+    //var row = "<tr><td>" + count + "</td><td>" + c + "</td></tr>";
+    var row = "<tr><td>" + c + "</td></tr>";
 
     $("#CSV").append(row);
 }

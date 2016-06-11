@@ -1,10 +1,15 @@
 /*jslint vars:true,plusplus:true,devel:true,nomen:true,indent:4,maxerr:100,node:true*/
 /*global define */
 
+var fs = require('fs');
+var csv = require('csv-parse/lib/sync');
 var express = require('express');
 var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
+
+'use strict';
+
 http.listen(3000, function () {
     'use strict';
     console.log('listening on *:3000');
@@ -14,28 +19,82 @@ app.use(express.static(__dirname + '/public'));
 /*
     Objects
 */
+function shuffle(array) {
+  var currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
+}
+
 var generatedRounds = function () {
-    'use strict';
-    return [{
-        round: 1,
-        answer: {
-            choices: ["George", "Jerry"],
-            answer: "Seinfeld"
-        },
-        clientRound: {
-            roundNum: 1,
-            roundTime: 12,
-            roundClass: "a",
-            options: [
-                "George",
-                "Apple",
-                "Green",
-                "Umbrella",
-                "Notebook",
-                "Jerry"
-            ]
-        }}
-    ];
+    fs.readFile(__dirname + '/questions.csv', 'utf8', function (err,data) {
+        var rounds  = [];
+        for(var r = 0; r < GAME.numRounds; r++){
+            var indices = [];
+            var numIndices = 5;
+            var records = csv(data, {});
+            for(var i = 0; i < numIndices; i++){
+                var alreadyUsed = true;
+                while(alreadyUsed){
+                    var index = Math.floor(Math.random() * records.length);
+                    var found = false;
+                    for(var j = 0; j < indices.length; j++){
+                        if(indices[j] == index){
+                            found = true;
+                        }
+                    }
+                    if(!found){
+                        alreadyUsed = false;
+                        indices.push(index);
+                    }
+                }   
+            }
+        
+            var round = {
+                answer: {
+                    answer: "",
+                    choices: ["", ""]
+                },
+                clientRound: {
+                    roundNum: 0,
+                    roundTime: 12,
+                    roundClass: "a",
+                    options: []
+                }
+            };
+        
+            //Set answer
+            var record = records[indices[0]];
+            round.answer.answer = record[0];
+            var seed = Math.floor(Math.random() * 3);
+            round.answer.choices[0] = record[1 + seed];
+            round.answer.choices[1] = record[2 + seed];
+            round.clientRound.options.push(round.answer.choices[0]);
+            round.clientRound.options.push(round.answer.choices[1]);
+            
+            for(var i = 1; i < indices.length; i++){
+                var optionRecord = records[indices[i]];
+                var option = optionRecord[Math.floor(1 + Math.random() * 4)];
+                round.clientRound.options.push(option);
+            }
+        
+            shuffle(round.clientRound.options);        
+            GAME.rounds.push(round);
+        }
+        console.log(GAME.rounds);
+    });       
 };
 
 var GAME = {
@@ -50,8 +109,9 @@ var GAME = {
         return "user" + this.nextUserIdToUse++;
     },
     currentRound: 0,
+    numRounds: 5,
     roundInProgress: false,
-    rounds: "",
+    rounds: [],
     gameStarted: false,
     countDown: 10,
     canStartGame: function() {
@@ -70,7 +130,7 @@ var GAME = {
         }
         this.gameUsers = [];
         this.currentRound = 0;
-        this.rounds = "";
+        this.rounds = [];
         this.gameStarted = false;
     },
     CONSTANTS: {
@@ -99,7 +159,7 @@ function gameOver(){
 function startGame () {
     console.log('[GameState] Starting Game');
     GAME.initiateGameUsers();
-    GAME.rounds = generatedRounds();
+    generatedRounds();
     GAME.gameStarted = true;
     emitUsersChanged();
     console.log("[Transition] Going to first round");
@@ -107,14 +167,12 @@ function startGame () {
 }
 
 function startNextRound() {
-    if((GAME.currentRound + 1) > GAME.rounds.length) {
+    if((GAME.currentRound + 1) > GAME.numRounds) {
         console.log("[Transtion] Going to game over");
         gameOver();
     }else{
         console.log("[GameState] Starting round");
-        
-        var nextRound = GAME.rounds[GAME.currentRound].clientRound;
-        
+               
         //Count down to game
         var c = GAME.countDown;
         var t = setInterval(function(){
@@ -125,6 +183,7 @@ function startNextRound() {
                 
                 console.log("[GameState] Round started");
                 GAME.roundInProgress = true;
+                var nextRound = GAME.rounds[GAME.currentRound].clientRound;
                 sendMessageToInGameUsers('next round', nextRound);
                 setTimeout(bootUnresponsive, 15000);
                 
@@ -261,6 +320,17 @@ function userSentNewMessage(msg){
     io.emit('new message', msg);
 }
 function userSubmittedSelection(userResponse, socket){
+    // Guard against non game-users from submitting selection
+    debugger;
+    try {
+        if (!userIsInGame(getUser(socket))) {
+            return;
+        }
+    }catch(err){
+        //if the socket is invalid, just return
+        return;
+    }
+    
     scoreUser
     (
         getUser(socket), 
