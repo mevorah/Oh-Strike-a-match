@@ -5,5 +5,5 @@ Open source version of Boxerjam's classic "Strike-a-match" - Remember Strike-A-M
 - Game logic/flow recreates the original's as close as possible 
 - Game is built on javascript
 - Questions/Answers are sourced from Wikipedia
-..- Questions are automatically generated
-..- Questions are reasonable in difficulty
+  - Questions are automatically generated
+  - Questions are reasonable in difficulty
