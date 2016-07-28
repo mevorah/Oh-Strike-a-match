@@ -1,3 +1,5 @@
+var scorer = require('./Scorer.js');
+
 /*jslint vars:true,plusplus:true,devel:true,nomen:true,indent:4,maxerr:100,node:true*/
 /*global define */
 
@@ -319,33 +321,6 @@ function userDisconnected(socketId){
 function userSentNewMessage(msg){
     io.emit('new message', msg);
 }
-function userSubmittedSelection(userResponse, socket){
-    // Guard against non game-users from submitting selection
-    debugger;
-    try {
-        if (!userIsInGame(getUser(socket))) {
-            return;
-        }
-    }catch(err){
-        //if the socket is invalid, just return
-        return;
-    }
-    
-    scoreUser
-    (
-        getUser(socket), 
-        userResponse, 
-        GAME.rounds[GAME.currentRound]
-    );
-    
-    console.log("socket:"+socket.id +"Submitted sel- Added to user returned");
-    GAME.usersReturned.push(getUser(socket));    
-    
-    console.log("usersReturned:"+GAME.usersReturned.length);
-    console.log("gameUsers:"+GAME.gameUsers.length);
-    
-    checkAndExecuteIfRoundComplete();
-}
 
 function checkAndExecuteIfRoundComplete(){
     if(GAME.usersReturned.length >= GAME.gameUsers.length ){
@@ -381,36 +356,33 @@ function sendMessageToInGameUsers(signal, msg){
     }
 }
 
-function scoreUser(user, userResponse, round){
-    console.log("scoring user");
-    
-    var answer = round.answer;
-    var choice1 = userResponse.choice1;
-    var choice2 = userResponse.choice2;
-    
-    var answerMap = [];
-    for(var i = 0; i < answer.choices.length; i++){
-        var answerChoice = answer.choices[i];
-        answerMap.push({choice: answerChoice, used: 0});
-    }
-    
-    for(var i = 0; i < answerMap.length; i++){
-        if((choice1 == answerMap[i].choice) || (choice2 == answerMap[i].choice)){
-            answerMap[i].used++;
+
+function userSubmittedSelection(userResponse, socket){
+    // Guard against non game-users from submitting selection
+    debugger;
+    try {
+        if (!userIsInGame(getUser(socket))) {
+            return;
         }
+    }catch(err){
+        //if the socket is invalid, just return
+        return;
     }
     
-    var answeredCorrectly = true;
-    for(var i = 0; i < answerMap.length; i++){
-        if(answerMap[i].used == 0){
-            answeredCorrectly = false;
-        }
-    }
+    scoreUser
+    (
+        getUser(socket), 
+        userResponse, 
+        GAME.rounds[GAME.currentRound]
+    );
     
-    //Increment score
-    if(answeredCorrectly == true){
-        user.score += Math.ceil( 1000 * ( userResponse.time / round.clientRound.roundTime) );
-    }
+    console.log("socket:"+socket.id +"Submitted sel- Added to user returned");
+    GAME.usersReturned.push(getUser(socket));    
+    
+    console.log("usersReturned:"+GAME.usersReturned.length);
+    console.log("gameUsers:"+GAME.gameUsers.length);
+    
+    checkAndExecuteIfRoundComplete();
 }
 
 function emitUsersChanged(){
@@ -418,21 +390,11 @@ function emitUsersChanged(){
 }
 
 /*
-Entry point for all client actions
-*/
+ *    Entry point for all client actions
+ */
 io.on('connection', function (socket) {
-    'use strict';
     userConnected(socket.id, socket);
-    
-    socket.on('disconnect', function(){
-        userDisconnected(socket.id);
-    });
-    
-    socket.on('new message', function(msg){
-        userSentNewMessage(msg); 
-    });
-    
-    socket.on('submitted selection', function(msg){
-        userSubmittedSelection(msg, socket);
-    });
+    socket.on('disconnect', function(){     userDisconnected(socket.id); });
+    socket.on('new message', function(msg){ userSentNewMessage(msg); });
+    socket.on('submitted selection', function(msg){ userSubmittedSelection(msg, socket); });
 });
