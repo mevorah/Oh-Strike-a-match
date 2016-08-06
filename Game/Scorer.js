@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * Scorer prototype 
+ * scorer prototype 
  */
 
 var publics = module.exports = {};
