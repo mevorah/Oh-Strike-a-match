@@ -1,60 +1,74 @@
 /*global before, describe, it*/
 'use strict';
 
-var chat = require('../chat.js');
-var CHAT_EVENT = chat.CHAT_EVENT;
 var assert = require('chai').assert;
 var app = require('express')();
 var http = require('http').Server(app);
-var ios = require('socket.io')(http);
+var IOServer = require('socket.io');
 var ioc = require('socket.io-client');
+
+var CHAT_EVENT = require('../chat.js').CHAT_EVENT;
 
 var testPort = 7326;
 var serverAddress = 'http://localhost:' + testPort;
+var testTimeOut = 2000; //ms
 
 describe('chat.js', function () {
     
-    before(function () {
+    var ios, chat;
+    
+    beforeEach(function () {
         http.listen(testPort);
-        chat.listen(ios);
+        console.log("hello");
+        chat = require('../chat.js');
+        ios = new IOServer(http);
+        chat.listen(ios);   
     });
     
     describe('chat:connection', function () {
-        it('should notify all users, including connector, that a new user joined', function () {
+        it('should notify all users, including connector, that a new user joined', function (done) {
             var client1, client2, numNotifications;
             numNotifications = 0;
   
             client1 = ioc(serverAddress);
-            client1.on(CHAT_EVENT.clientConnection, function (data) {
+            client1.on(CHAT_EVENT.clientConnection, function () {
                 numNotifications += 1;
+                
+                if (numNotifications === 2) {
+                    done();
+                }
             });
             
             client2 = ioc(serverAddress);
-            
-            assert(numNotifications === 2);
         });
         
-        it('should send some username in connection message', function () {
-            var client1, client2, username;
-            
-            username = "";
+        it('should send enumerated username in connection message', function (done) {
+            var client1, client2, username0, username1, usernames;
+            username0 = "user0";
+            username1 = "user1";
+            usernames = [];
             
             client1 = ioc(serverAddress);
             client1.on(CHAT_EVENT.clientConnection, function (data) {
-                username = data.username;
+                console.log(data);
+                usernames.push(data.username);
+                if (usernames.length === 2) {
+                    if (usernames[0] === username0 &&
+                       (usernames[1] === username1)) {
+                        done();
+                    }
+                }
             });
             
             client2 = ioc(serverAddress);
-            
-            assert(username.length > 0);
         });
     });
     
-    describe('chat:message', function () {
+   /* describe('chat:message', function () {
         it('should send message to all users', function () {
             assert(1 === 2);
         });
-    });
+    }); */
 });
 
 
