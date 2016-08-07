@@ -1,4 +1,4 @@
-/*global before, describe, it*/
+/*global before, beforeEach, describe, it*/
 'use strict';
 
 var assert = require('chai').assert;
@@ -19,10 +19,9 @@ describe('chat.js', function () {
     
     beforeEach(function () {
         http.listen(testPort);
-        console.log("hello");
         chat = require('../chat.js');
         ios = new IOServer(http);
-        chat.listen(ios);   
+        chat.listen(ios);
     });
     
     describe('chat:connection', function () {
@@ -46,15 +45,12 @@ describe('chat.js', function () {
             var client1, client2, username0, username1, usernames;
             username0 = "user0";
             username1 = "user1";
-            usernames = [];
             
             client1 = ioc(serverAddress);
             client1.on(CHAT_EVENT.clientConnection, function (data) {
-                console.log(data);
-                usernames.push(data.username);
-                if (usernames.length === 2) {
-                    if (usernames[0] === username0 &&
-                       (usernames[1] === username1)) {
+                if (data.usernames.length === 2) {
+                    if (data.usernames[0] === username0 &&
+                            data.usernames[1] === username1) {
                         done();
                     }
                 }
@@ -64,21 +60,90 @@ describe('chat.js', function () {
         });
     });
     
-   /* describe('chat:message', function () {
-        it('should send message to all users', function () {
-            assert(1 === 2);
+    describe('chat:disconnection', function () {
+        it('should notify all users that a user has disconnected', function (done) {
+            var client1, client2, connections;
+            client1 = ioc(serverAddress);
+            client2 = ioc(serverAddress);
+            connections = 0;
+            
+            client1.on(CHAT_EVENT.clientConnection, function (data) {
+                connections += 1;
+            });
+            client2.on(CHAT_EVENT.clientConnection, function (data) {
+                client2.disconnect();
+            });
+            
+            client1.on(CHAT_EVENT.clientDisconnection, function (data) {
+                connections -= 1;
+                if (connections === 1) {
+                    done();
+                }
+            });
         });
-    }); */
+        it('should send an updated list of users', function (done) {
+            var client1, client2, username;
+            username = "user0";
+            client1 = ioc(serverAddress);
+            client2 = ioc(serverAddress);
+            
+            client2.on(CHAT_EVENT.clientConnection, function (data) {
+                client2.disconnect();
+            });
+            
+            client1.on(CHAT_EVENT.clientDisconnection, function (data) {
+                var numUsers = data.usernames !== undefined ?
+                            data.usernames.length : 0;
+                if (numUsers === 1 &&
+                        data.usernames[0] === username) {
+                    done();
+                }
+            });
+        });
+    });
+    
+    describe('chat:message', function () {
+        it('should send message to all users', function (done) {
+            var client1, client2, message, messagesReceived, completeCallback;
+            client1 = ioc(serverAddress);
+            client2 = ioc(serverAddress);
+            message = "Cactus";
+            messagesReceived = [];
+            
+            completeCallback = function () {
+                if (messagesReceived.length === 2) {
+                    if (messagesReceived[0] === message &&
+                            messagesReceived[1] === message) {
+                        done();
+                    }
+                }
+            };
+            
+            client1.emit(CHAT_EVENT.serverMessage, {message: message});
+            client1.on(CHAT_EVENT.clientMessage, function (data) {
+                messagesReceived.push(data.message);
+                completeCallback();
+            });
+            
+            client2.on(CHAT_EVENT.clientMessage, function (data) {
+                messagesReceived.push(data.message);
+                completeCallback();
+            });
+             
+        });
+        
+        it('should include who sent the message', function (done) {
+            var client1, username, message;
+            client1 = ioc(serverAddress);
+            username = "user0";
+            message = "Canyon";
+            
+            client1.emit(CHAT_EVENT.serverMessage, {message: message});
+            client1.on(CHAT_EVENT.clientMessage, function (data) {
+                if (username === data.user) {
+                    done();
+                }
+            });
+        });
+    });
 });
-
-
-
-
-
-
-
-
-
-
-
-
