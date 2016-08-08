@@ -323,7 +323,7 @@ describe('roundBuilder.js', function () {
             //the five
             assert('theme8' === round1.answer.theme);
         });
-        describe('should submitt sections based on what the round requires', function () {
+        describe('should pass sections based on what the round requires', function () {
             it('sixChoose2: chunks of five', function () {
                 var rounds, roundBreakdown, seed, round1, round2;
                 roundBreakdown = {
@@ -339,6 +339,22 @@ describe('roundBuilder.js', function () {
                 
                 round2 = rounds[1];
                 assert('theme5' === round2.answer.theme);
+            });
+            it('should allow wrapping around data', function () {
+                var rounds, roundBreakdown, seed, round1, round2;
+                roundBreakdown = {
+                    sixChoose2: 2,
+                    tenChoose3: 0,
+                    sixteenSplit2: 0
+                };
+                seed = 10;
+                rounds = roundbuilder.buildRounds(roundBreakdown, seed, validData);
+                
+                round1 = rounds[0];
+                assert('themeA' === round1.answer.theme);
+                
+                round2 = rounds[1];
+                assert('themeF' === round2.answer.theme);
             });
             it('tenChoose3: chunks of seven', function () {
                 var rounds, roundBreakdown, seed, round1, round2;
@@ -373,6 +389,7 @@ describe('roundBuilder.js', function () {
                 assert('theme8' === round2.answer.theme);
             });
         });
+        
     });
 });
 

@@ -139,8 +139,15 @@ publics.buildRounds = function (roundBreakdown, seed, data) {
     indexStart = seed;
     
     for (i = 0; i < roundBreakdown.sixChoose2; i += 1) {
+        roundData = [];
+        
         indexEnd = (indexStart + RoundBreakdown.sixChoose2.required) % data.length;
-        roundData = data.slice(indexStart, indexEnd);
+        if (indexEnd < indexStart) {
+            roundData = roundData.concat(data.slice(indexStart, data.length));
+            roundData = roundData.concat(data.slice(0, indexEnd));
+        } else {
+            roundData = data.slice(indexStart, indexEnd);
+        }
         round = this.buildRound6Choose2(seed, roundData);
         indexStart = indexEnd;
         rounds.push(round);
