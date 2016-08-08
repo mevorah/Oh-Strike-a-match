@@ -7,6 +7,24 @@
 var publics = module.exports = {};
 
 /**
+ * round breakown prototype
+ */
+
+publics.RoundBreakdown = {
+    sixChoose2: {
+        required: 5
+    },
+    tenChoose3: {
+        required: 7
+    },
+    sixteenSplit2: {
+        required: 8
+    }
+};
+
+var RoundBreakdown = publics.RoundBreakdown;
+
+/**
  * buildRound6Choose2: returns a round with 6 options, 2
  * correct options, 1 correct answer
  * 
@@ -80,5 +98,53 @@ publics.buildRound6Choose2 = function (seed, data) {
  */
 
 publics.buildRounds = function (roundBreakdown, seed, data) {
+    var rounds, numData, numDataRequired, indexStart, indexEnd, i, round, roundData;
     
+    // input validation
+    if (!(data instanceof Array)) {
+        throw {
+            name: 'TypeError',
+            message: 'Requires data to be of type array. Found:' + typeof data
+        };
+    }
+    if (typeof seed !== 'number') {
+        throw {
+            name: 'TypeError',
+            message: 'Requires seed to be of type number. Found:' + typeof seed
+        };
+    }
+    if (roundBreakdown.sixChoose2 === undefined ||
+            roundBreakdown.tenChoose3 === undefined ||
+            roundBreakdown.sixteenSplit2 === undefined) {
+        throw {
+            name: 'BadArgumentError',
+            message: 'Round breakdown requires sixChoose2, tenChoose3, and sixteenSplit2 members'
+        };
+    }
+    
+    numData = data.length;
+    numDataRequired = roundBreakdown.sixChoose2 * RoundBreakdown.sixChoose2.required +
+        roundBreakdown.tenChoose3 * RoundBreakdown.tenChoose3.required +
+        roundBreakdown.sixteenSplit2 * RoundBreakdown.sixteenSplit2.required;
+    
+    if (numDataRequired > numData) {
+        throw {
+            name: 'InsufficientDataError',
+            message: 'Required data:' + numDataRequired + ', Found:' + numData
+        };
+    }
+    
+    // build rounds
+    rounds = [];
+    indexStart = seed;
+    
+    for (i = 0; i < roundBreakdown.sixChoose2; i += 1) {
+        indexEnd = (indexStart + RoundBreakdown.sixChoose2.required) % data.length;
+        roundData = data.slice(indexStart, indexEnd);
+        round = this.buildRound6Choose2(seed, roundData);
+        indexStart = indexEnd;
+        rounds.push(round);
+    }
+    
+    return rounds;
 };

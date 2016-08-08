@@ -120,32 +120,260 @@ describe('roundBuilder.js', function () {
     });
     
     describe('roundbuilder:buildRounds', function () {
+        
+        var validRoundBreakdown, validSeed, validData;
+    
+        validRoundBreakdown = {
+            sixChoose2: 0,
+            tenChoose3: 0,
+            sixteenSplit2: 0
+        };
+        
+        validSeed = 2;
+        
+        validData = [
+            ['theme0', 'option00', 'option01', 'option02', 'option03'],
+            ['theme1', 'option10', 'option11', 'option12', 'option13'],
+            ['theme2', 'option20', 'option21', 'option22', 'option23'],
+            ['theme3', 'option30', 'option31', 'option32', 'option33'],
+            ['theme4', 'option40', 'option41', 'option42', 'option43'],
+            ['theme5', 'option50', 'option51', 'option52', 'option53'],
+            ['theme6', 'option60', 'option61', 'option62', 'option63'],
+            ['theme7', 'option70', 'option71', 'option72', 'option73'],
+            ['theme8', 'option80', 'option81', 'option82', 'option83'],
+            ['theme9', 'option90', 'option91', 'option92', 'option93'],
+            ['themeA', 'optionA0', 'optionA1', 'optionA2', 'optionA3'],
+            ['themeB', 'optionB0', 'optionB1', 'optionB2', 'optionB3'],
+            ['themeC', 'optionC0', 'optionC1', 'optionC2', 'optionC3'],
+            ['themeD', 'optionD0', 'optionD1', 'optionD2', 'optionD3'],
+            ['themeE', 'optionE0', 'optionE1', 'optionE2', 'optionE3'],
+            ['themeF', 'optionF0', 'optionF1', 'optionF2', 'optionF3']
+        ];
+        
         it('should throw a TypeError if data is not of type array', function () {
-            assert(1 === 2);
+            var badData, caught, rounds;
+            caught = false;
+            badData = "string";
+            
+            try {
+                rounds = roundbuilder.buildRounds(validRoundBreakdown, validSeed, badData);
+            } catch (e) {
+                caught = true;
+                assert(e.name === 'TypeError');
+            }
+            
+            if (!caught) {
+                assert(false);
+            }
+            
         });
-        it('should throw InsufficientDataError if data.length < numRounds * roundType requirements', function () {
-            assert(1 === 2);
+        describe('should throw InsufficientDataError if data.length < numRounds * roundType requirements', function () {
+            it('sixChoose2:requires 5 datum', function () {
+                var roundBreakdown, caught, rounds;
+                caught = false;
+                roundBreakdown = {
+                    sixChoose2: 10,
+                    tenChoose3: 0,
+                    sixteenSplit2: 0
+                };
+                
+                try {
+                    rounds = roundbuilder.buildRounds(roundBreakdown, validSeed, validData);
+                } catch (e) {
+                    caught = true;
+                    assert(e.name === 'InsufficientDataError');
+                }
+                
+                if (!caught) {
+                    assert(false);
+                }
+            });
+            it('tenChoose3:requires 7 datum', function () {
+                var roundBreakdown, caught, rounds;
+                caught = false;
+                roundBreakdown = {
+                    sixChoose2: 0,
+                    tenChoose3: 10,
+                    sixteenSplit2: 0
+                };
+                
+                try {
+                    rounds = roundbuilder.buildRounds(roundBreakdown, validSeed, validData);
+                } catch (e) {
+                    caught = true;
+                    assert(e.name === 'InsufficientDataError');
+                }
+                
+                if (!caught) {
+                    assert(false);
+                }
+            });
+            it('sixteenSplit2:requires 8 datum', function () {
+                var roundBreakdown, caught, rounds;
+                caught = false;
+                roundBreakdown = {
+                    sixChoose2: 0,
+                    tenChoose3: 0,
+                    sixteenSplit2: 10
+                };
+                
+                try {
+                    rounds = roundbuilder.buildRounds(roundBreakdown, validSeed, validData);
+                } catch (e) {
+                    caught = true;
+                    assert(e.name === 'InsufficientDataError');
+                }
+                
+                if (!caught) {
+                    assert(false);
+                }
+            });
         });
-        it('should throw if roundBreakdown does not contain 6 choose 2', function () {
-            assert(1 === 2);
+        it('should throw BadArgumentError if roundBreakdown does not contain 6 choose 2', function () {
+            var badRoundBreakdown, caught, rounds;
+            caught = false;
+            badRoundBreakdown = {
+                tenChoose3: 0,
+                sixteenSplit2: 0
+            };
+            
+            try {
+                rounds = roundbuilder.buildRounds(badRoundBreakdown, validSeed, validData);
+            } catch (e) {
+                caught = true;
+                assert(e.name === 'BadArgumentError');
+            }
+            
+            if (!caught) {
+                assert(false);
+            }
         });
-        it('should throw if roundBreakdown does not contain 10 choose 3', function () {
-            assert(1 === 2);
+        it('should throw BadArgumentError if roundBreakdown does not contain 10 choose 3', function () {
+            var badRoundBreakdown, caught, rounds;
+            caught = false;
+            badRoundBreakdown = {
+                sixChoose2: 0,
+                sixteenSplit2: 0
+            };
+            
+            try {
+                rounds = roundbuilder.buildRounds(badRoundBreakdown, validSeed, validData);
+            } catch (e) {
+                caught = true;
+                assert(e.name === 'BadArgumentError');
+            }
+            
+            if (!caught) {
+                assert(false);
+            }
         });
-        it('should throw if roundBreakdown does not contain 16 split 2', function () {
-            assert(1 === 2);
+        it('should throw BadArgumentError if roundBreakdown does not contain 16 split 2', function () {
+            var badRoundBreakdown, caught, rounds;
+            caught = false;
+            badRoundBreakdown = {
+                sixChoose2: 0,
+                tenChoose3: 0
+            };
+            
+            try {
+                rounds = roundbuilder.buildRounds(badRoundBreakdown, validSeed, validData);
+            } catch (e) {
+                caught = true;
+                assert(e.name === 'BadArgumentError');
+            }
+            
+            if (!caught) {
+                assert(false);
+            }
         });
         it('should return an array of rounds', function () {
-            assert(1 === 2); 
+            var rounds;
+            rounds = roundbuilder.buildRounds(validRoundBreakdown, validSeed, validData);
+            assert(rounds instanceof Array);
         });
         it('should throw a TypeError if seed is not of type number', function () {
-            assert(1 === 2);             
+            var badSeed, caught, rounds;
+            caught = false;
+            badSeed = "string";
+            
+            try {
+                rounds = roundbuilder.buildRounds(validRoundBreakdown, badSeed, validData);
+            } catch (e) {
+                caught = true;
+                assert(e.name === 'TypeError');
+            }
+            
+            if (!caught) {
+                assert(false);
+            }
         });
         it('should index into data seed % data.length', function () {
-            assert(1 === 2); 
+            var rounds, roundBreakdown, seed, round1;
+            roundBreakdown = {
+                sixChoose2: 1,
+                tenChoose3: 0,
+                sixteenSplit2: 0
+            };
+            seed = 4;
+            
+            rounds = roundbuilder.buildRounds(roundBreakdown, seed, validData);
+            
+            round1 = rounds[0];
+            //8 - index 4 in to start the five. Index 4 again within
+            //the five
+            assert('theme8' === round1.answer.theme);
+        });
+        describe('should submitt sections based on what the round requires', function () {
+            it('sixChoose2: chunks of five', function () {
+                var rounds, roundBreakdown, seed, round1, round2;
+                roundBreakdown = {
+                    sixChoose2: 2,
+                    tenChoose3: 0,
+                    sixteenSplit2: 0
+                };
+                seed = 0;
+                rounds = roundbuilder.buildRounds(roundBreakdown, seed, validData);
+                
+                round1 = rounds[0];
+                assert('theme0' === round1.answer.theme);
+                
+                round2 = rounds[1];
+                assert('theme5' === round2.answer.theme);
+            });
+            it('tenChoose3: chunks of seven', function () {
+                var rounds, roundBreakdown, seed, round1, round2;
+                roundBreakdown = {
+                    sixChoose2: 0,
+                    tenChoose3: 2,
+                    sixteenSplit2: 0
+                };
+                seed = 0;
+                rounds = roundbuilder.buildRounds(roundBreakdown, seed, validData);
+                
+                round1 = rounds[0];
+                assert('theme0' === round1.answer.theme);
+                
+                round2 = rounds[1];
+                assert('theme7' === round2.answer.theme);
+            });
+            it('sixteenSplit2: chunks of eight', function () {
+                var rounds, roundBreakdown, seed, round1, round2;
+                roundBreakdown = {
+                    sixChoose2: 0,
+                    tenChoose3: 0,
+                    sixteenSplit2: 2
+                };
+                seed = 0;
+                rounds = roundbuilder.buildRounds(roundBreakdown, seed, validData);
+                
+                round1 = rounds[0];
+                assert('theme0' === round1.answer.theme);
+                
+                round2 = rounds[1];
+                assert('theme8' === round2.answer.theme);
+            });
         });
     });
-
 });
 
 
