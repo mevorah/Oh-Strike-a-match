@@ -6,6 +6,7 @@ var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var chat = require('./chat.js');
+var game = require('./game.js');
 
 /**
 * Setup http server to listen on port 
@@ -24,8 +25,13 @@ http.listen(3000, function () {
 app.use(express.static(__dirname + '/public'));
 
 /**
- * Tell chat to listen to events
+ * Tell chat to listen for events
  */
 
 chat.listen(io);
 
+/**
+ * Initialize and tell game to listen for events
+ */
+
+game.listen(io);

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * chat prototype 
+ * _ prototype 
  */
 
 var publics = module.exports = {};
