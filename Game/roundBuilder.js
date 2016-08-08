@@ -11,11 +11,15 @@ var publics = module.exports = {};
  * correct options, 1 correct answer
  * 
  * @param seed
- * @param data [[theme:theme,option1:option1,...,option5:option5]..]
- * @return round type a
+ * @param data [[theme:theme,option0:option0,...,option4:option4](5)]
+ * @return round
+ * @throws TypeError
+ * @throws BadArgumentError
  */
 
 publics.buildRound6Choose2 = function (seed, data) {
+    var round, i, answerIndex, answerData, optionIndex1, optionIndex2, option, datum;
+    
     if (!(data instanceof Array)) {
         throw {
             name: 'TypeError',
@@ -34,9 +38,7 @@ publics.buildRound6Choose2 = function (seed, data) {
             message: 'Requires seed to be of type number. Found:' + typeof seed
         };
     }
-    
-    var round, i, answerIndex, answerData, optionIndex1, optionIndex2, option, datum;
-    
+        
     round = {
         options: [],
         answer: {
@@ -68,25 +70,15 @@ publics.buildRound6Choose2 = function (seed, data) {
 };
 
 /**
- * buildRound: responsible for creating individual
- * rounds.
- *
- * @param type
- * @return round
- */
-
-publics.buildRound = function (type) {
-    
-};
-
-/**
  * buildRounds: responsible for creating a collection
  * of rounds.
  *
- * @param numRounds
+ * @param roundBreakdown
+ * @param seed
+ * @param data
  * @return List<round>
  */
 
-publics.buildRounds = function (numRounds) {
+publics.buildRounds = function (roundBreakdown, seed, data) {
     
 };

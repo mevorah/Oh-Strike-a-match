@@ -5,18 +5,18 @@ var assert = require('chai').assert;
 var roundbuilder = require('../roundBuilder.js');
 
 describe('roundBuilder.js', function () {
-    var validSeed, validData;
-    
-    validSeed = 2;
-    validData = [
-        ['theme0', 'option00', 'option01', 'option02', 'option03'],
-        ['theme1', 'option10', 'option11', 'option12', 'option13'],
-        ['theme2', 'option20', 'option21', 'option22', 'option23'],
-        ['theme3', 'option30', 'option31', 'option32', 'option33'],
-        ['theme4', 'option40', 'option41', 'option42', 'option43']
-    ];
-    
     describe('roundbuilder:buildRound6Choose2', function () {
+        var validSeed, validData;
+    
+        validSeed = 2;
+        validData = [
+            ['theme0', 'option00', 'option01', 'option02', 'option03'],
+            ['theme1', 'option10', 'option11', 'option12', 'option13'],
+            ['theme2', 'option20', 'option21', 'option22', 'option23'],
+            ['theme3', 'option30', 'option31', 'option32', 'option33'],
+            ['theme4', 'option40', 'option41', 'option42', 'option43']
+        ];
+        
         it('should return an object with 6 options', function () {
             var round;
             round = roundbuilder.buildRound6Choose2(validSeed, validData);
@@ -118,6 +118,34 @@ describe('roundBuilder.js', function () {
             assert(optionSet.has('option23'));
         });
     });
+    
+    describe('roundbuilder:buildRounds', function () {
+        it('should throw a TypeError if data is not of type array', function () {
+            assert(1 === 2);
+        });
+        it('should throw InsufficientDataError if data.length < numRounds * roundType requirements', function () {
+            assert(1 === 2);
+        });
+        it('should throw if roundBreakdown does not contain 6 choose 2', function () {
+            assert(1 === 2);
+        });
+        it('should throw if roundBreakdown does not contain 10 choose 3', function () {
+            assert(1 === 2);
+        });
+        it('should throw if roundBreakdown does not contain 16 split 2', function () {
+            assert(1 === 2);
+        });
+        it('should return an array of rounds', function () {
+            assert(1 === 2); 
+        });
+        it('should throw a TypeError if seed is not of type number', function () {
+            assert(1 === 2);             
+        });
+        it('should index into data seed % data.length', function () {
+            assert(1 === 2); 
+        });
+    });
+
 });
 
 
